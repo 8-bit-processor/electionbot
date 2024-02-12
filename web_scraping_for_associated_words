@@ -1,0 +1,44 @@
+import requests
+from bs4 import BeautifulSoup
+import textblob
+
+def get_internet_text_list(search_word, search_word2, search_word3):
+    results = requests.get("https://www.google.com/search?q=" + search_word + " " + search_word2, " " + search_word3)
+    src = results.content
+    cleantext = BeautifulSoup(src, "lxml").text
+    cleantext = remove_bad_char(cleantext)
+    print("==============================================")
+    print(cleantext)
+    text_list = cleantext.split(". ")
+    clean_list = clean_text_list(text_list)
+    print("======================================================")
+    for sent in clean_list:
+        print(sent)
+    x = len(clean_list)
+    print("the list is ", x, " length")
+    return clean_list
+
+
+def clean_text_list(text_list):
+    clean_list = []
+    for item in text_list:
+        if ("Please click" in item
+                or "AllNewsImagesVideos" in item):
+            print("removing junk text")
+        else:
+            clean_list.append(item)
+    return clean_list
+
+
+def remove_bad_char(some_text):
+    bad_char = [" · ", "1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "/", "People also ask", "...", ">"
+                "day ago","days ago","week ago","weeks ago"]
+    for char in bad_char:
+        if char in some_text:
+            some_text.replace(char, "")
+    return some_text
+
+searchword= input("what is keyword1")
+searchword2 = input("what is keyword2")
+searchword3 = input("what is keyword3")
+get_internet_text_list(searchword, searchword2, searchword3)

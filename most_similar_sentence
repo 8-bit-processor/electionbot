@@ -1,0 +1,206 @@
+# Create a list to store all the unique words of the file. Convert all the sentences of the file into the binary
+# format by comparing each word with the content of the list, after cleaning(removing stopword, stemming,
+# etc.) Convert the input sentence in the binary format. Find the number of similar words in the input sentence to
+# each sentence and store the value in the list named similarity index. Find the maximum value of similarity index
+# and return the sentence having maximum similar words.
+from nltk.stem import PorterStemmer
+from nltk.tokenize import word_tokenize, sent_tokenize
+import nltk
+from nltk.corpus import stopwords
+
+nltk.download('stopwords')
+stemmer_object = PorterStemmer()
+
+# get internet search text object list of sentences with period at end
+
+
+# get text from saved file and make object
+file_object = open('collected_data_file.txt')
+print(f"here is the file object{file_object}")
+# break up into sentences *** must have period at end of each sentence ***
+sentences_tokenized = sent_tokenize(file_object.read())
+print(f"sentences tokenized {sentences_tokenized}")
+
+#  get stopwords list
+stop_words = list(stopwords.words('english'))
+
+# create objects to remove punctuation signs and tokenize words
+punctuation = '''!()-[]{};:'"\, <>./?@#$%^&*_~'''
+words_tokenized = [(word_tokenize(sentences_tokenized[i])) for i in range(len(sentences_tokenized))]
+print(f"words tokenized {words_tokenized}")
+
+# create a list of sentences each containing its unique token to represent the identity of the sentence
+# after removing stopwords or words that add no meaning to the sentence
+sentence_vector_represented_by_tokens = []
+for sentence_index in range(len(words_tokenized)):
+    token_list_after_stopwords_removed = []
+
+    for word_index in range(len(words_tokenized[sentence_index])):
+
+        if words_tokenized[sentence_index][word_index] not in (punctuation or stop_words):
+            words_tokenized[sentence_index][word_index] = stemmer_object.stem(
+                words_tokenized[sentence_index][word_index])
+
+            if words_tokenized[sentence_index][word_index] not in stop_words:
+                token_list_after_stopwords_removed.append(words_tokenized[sentence_index][word_index].lower())
+    sentence_vector_represented_by_tokens.append(set(token_list_after_stopwords_removed))
+print(f"the sentence vector represented by its unique tokens {sentence_vector_represented_by_tokens}")
+
+# starting with index 0, gather all unique token vectors from the unique list
+total_combined_unique_token_vectors = sentence_vector_represented_by_tokens[0]
+print(f"unique token vectors are {total_combined_unique_token_vectors}")
+for sentence_index in range(1, len(words_tokenized)):
+    total_combined_unique_token_vectors = (
+        total_combined_unique_token_vectors.union(sentence_vector_represented_by_tokens[sentence_index]))
+    print(f"unique token vectors are {total_combined_unique_token_vectors}")
+
+# make a new list to convert the sentences into binary format
+binary_vector_sentences = []
+for sentence_index in range(len(sentence_vector_represented_by_tokens)):
+    binary_score_list = []
+    for word in total_combined_unique_token_vectors:
+        if word in sentence_vector_represented_by_tokens[sentence_index]:
+            binary_score_list.append(1)
+        else:
+            binary_score_list.append(0)
+    binary_vector_sentences.append(binary_score_list)
+print(f"sentence binary vector list {binary_vector_sentences}")
+
+# get user input then convert into tokens and count similar token vectors
+comparison_text = input("Input: ")
+
+tokenized_comparison_text = (word_tokenize(comparison_text))
+tokenized_comparison_text = [stemmer_object.stem(tokenized_comparison_text[comparison_text_index]).lower() for
+                             comparison_text_index in range(len(tokenized_comparison_text))]
+
+unique_tokens_from_comparison_text = []
+for word in total_combined_unique_token_vectors:
+    if word in tokenized_comparison_text:
+        unique_tokens_from_comparison_text.append(1)
+    else:# Create a list to store all the unique words of the file. Convert all the sentences of the file into the binary
+# format by comparing each word with the content of the list, after cleaning(removing stopword, stemming,
+# etc.) Convert the input sentence in the binary format. Find the number of similar words in the input sentence to
+# each sentence and store the value in the list named similarity index. Find the maximum value of similarity index
+# and return the sentence having maximum similar words.
+from nltk.stem import PorterStemmer
+from nltk.tokenize import word_tokenize, sent_tokenize
+import nltk
+from nltk.corpus import stopwords
+
+nltk.download('stopwords')
+stemmer_object = PorterStemmer()
+
+# get internet search text object list of sentences with period at end
+
+
+# get text from saved file and make object
+file_object = open('collected_data_file.txt')
+print(f"here is the file object{file_object}")
+# break up into sentences *** must have period at end of each sentence ***
+sentences_tokenized = sent_tokenize(file_object.read())
+print(f"sentences tokenized {sentences_tokenized}")
+
+#  get stopwords list
+stop_words = list(stopwords.words('english'))
+
+# create objects to remove punctuation signs and tokenize words
+punctuation = '''!()-[]{};:'"\, <>./?@#$%^&*_~'''
+words_tokenized = [(word_tokenize(sentences_tokenized[i])) for i in range(len(sentences_tokenized))]
+print(f"words tokenized {words_tokenized}")
+
+# create a list of sentences each containing its unique token to represent the identity of the sentence
+# after removing stopwords or words that add no meaning to the sentence
+sentence_vector_represented_by_tokens = []
+for sentence_index in range(len(words_tokenized)):
+    token_list_after_stopwords_removed = []
+
+    for word_index in range(len(words_tokenized[sentence_index])):
+
+        if words_tokenized[sentence_index][word_index] not in (punctuation or stop_words):
+            words_tokenized[sentence_index][word_index] = stemmer_object.stem(
+                words_tokenized[sentence_index][word_index])
+
+            if words_tokenized[sentence_index][word_index] not in stop_words:
+                token_list_after_stopwords_removed.append(words_tokenized[sentence_index][word_index].lower())
+    sentence_vector_represented_by_tokens.append(set(token_list_after_stopwords_removed))
+print(f"the sentence vector represented by its unique tokens {sentence_vector_represented_by_tokens}")
+
+# starting with index 0, gather all unique token vectors from the unique list
+total_combined_unique_token_vectors = sentence_vector_represented_by_tokens[0]
+print(f"unique token vectors are {total_combined_unique_token_vectors}")
+for sentence_index in range(1, len(words_tokenized)):
+    total_combined_unique_token_vectors = (
+        total_combined_unique_token_vectors.union(sentence_vector_represented_by_tokens[sentence_index]))
+    print(f"unique token vectors are {total_combined_unique_token_vectors}")
+
+# make a new list to convert the sentences into binary format
+binary_vector_sentences = []
+for sentence_index in range(len(sentence_vector_represented_by_tokens)):
+    binary_score_list = []
+    for word in total_combined_unique_token_vectors:
+        if word in sentence_vector_represented_by_tokens[sentence_index]:
+            binary_score_list.append(1)
+        else:
+            binary_score_list.append(0)
+    binary_vector_sentences.append(binary_score_list)
+print(f"sentence binary vector list {binary_vector_sentences}")
+
+# get user input then convert into tokens and count similar token vectors
+comparison_text = input("Input: ")
+
+tokenized_comparison_text = (word_tokenize(comparison_text))
+tokenized_comparison_text = [stemmer_object.stem(tokenized_comparison_text[comparison_text_index]).lower() for
+                             comparison_text_index in range(len(tokenized_comparison_text))]
+
+unique_tokens_from_comparison_text = []
+for word in total_combined_unique_token_vectors:
+    if word in tokenized_comparison_text:
+        unique_tokens_from_comparison_text.append(1)
+    else:
+        unique_tokens_from_comparison_text.append(0)
+
+binary_comparison_score_list = []
+
+for word_index in range(len(binary_vector_sentences)):
+    similarity_index = 0
+    counter = 0
+    # each time a token vector is matched the score is increased
+    if unique_tokens_from_comparison_text == binary_vector_sentences[word_index]:
+        binary_comparison_score_list.append(0)
+    else:
+        for sentence_index in range(len(total_combined_unique_token_vectors)):
+            counter += unique_tokens_from_comparison_text[sentence_index] * binary_vector_sentences[word_index][
+                sentence_index]
+        similarity_index += counter
+        binary_comparison_score_list.append(similarity_index)
+
+# get the highest score then identify to which sentence it belonged
+maximum = max(binary_comparison_score_list)
+print("Similar sentences: ")
+for sentence_index in range(len(binary_comparison_score_list)):
+    if binary_comparison_score_list[sentence_index] == maximum:
+        print(sentences_tokenized[sentence_index])
+
+        unique_tokens_from_comparison_text.append(0)
+
+binary_comparison_score_list = []
+
+for word_index in range(len(binary_vector_sentences)):
+    similarity_index = 0
+    counter = 0
+    # each time a token vector is matched the score is increased
+    if unique_tokens_from_comparison_text == binary_vector_sentences[word_index]:
+        binary_comparison_score_list.append(0)
+    else:
+        for sentence_index in range(len(total_combined_unique_token_vectors)):
+            counter += unique_tokens_from_comparison_text[sentence_index] * binary_vector_sentences[word_index][
+                sentence_index]
+        similarity_index += counter
+        binary_comparison_score_list.append(similarity_index)
+
+# get the highest score then identify to which sentence it belonged
+maximum = max(binary_comparison_score_list)
+print("Similar sentences: ")
+for sentence_index in range(len(binary_comparison_score_list)):
+    if binary_comparison_score_list[sentence_index] == maximum:
+        print(sentences_tokenized[sentence_index])

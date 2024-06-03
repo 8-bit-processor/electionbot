@@ -1,0 +1,190 @@
+import torch
+import torch.nn as nn
+from torch.nn import functional
+from text_data import text
+
+characters = sorted(list(set(text)))
+print(f"Here are the unique characters and nicely sorted:\n {characters}")
+character_vocab_size = len(characters)
+print()
+print(
+    f"Here is the size of our unique character vocabulary: \n size = {character_vocab_size} \n\nunique "
+    f"characters : {''.join(characters)}")
+# Tokenization - in this case we will create a simple mapping of character:integer to encode and decode
+# in a production setting, google uses sentencePiece which encodes sub words and openAI uses tiktoken and
+# both are using byte pair to tokenize
+string_to_integer = {ch: i for i, ch in enumerate(characters)}
+integer_to_string = {i: ch for i, ch in enumerate(characters)}
+
+
+def encode(the_string):
+    return [string_to_integer[char] for char in the_string]
+
+
+def decode(the_integers):
+    return ''.join([integer_to_string[i] for i in the_integers])
+
+
+print()
+print(f"Here is the string to integer encoding: \n {encode(characters)}")
+print()
+print(f"Here is the decoded string data: {decode(encode(characters))}")
+
+# encode entire text data into torch tensor
+
+torch_tensor_data = torch.tensor(encode(text), dtype=torch.long)
+print()
+print(f"Data shape: {torch_tensor_data.shape} and data type : {torch_tensor_data.dtype}")
+print()
+print(f"Here are the first 1000 values of this torch tensor: \n {torch_tensor_data[:1000]}")
+
+# Split data into training and validation sets
+# first 90% will be training data
+# the remainder 10% will be validation data
+ninety_percent_of_total_tensor_data = int(0.9 * len(torch_tensor_data))
+training_data = torch_tensor_data[:ninety_percent_of_total_tensor_data]
+validation_data = torch_tensor_data[ninety_percent_of_total_tensor_data:]
+
+# create blocks of data sequences to feed the transformer
+# block size is sometimes referred to has context length,
+# blocks or chunks of training data are used because otherwise too computationally expensive
+block_size = 8
+print()
+print(f"here is a sample block of data -for example we are showing the first {block_size} tokens. \n "
+      f"this block has many positional relations that be trained into the transformer\n"
+      f"{training_data[:block_size]}")
+print()
+print("This is how this block of training data will be fed into the transformer:")
+# the training block is the first 9 integer-tokens
+x_context_data_block = training_data[:block_size]
+# the target block is shifted +1 this points to the next integer-token
+y_target_prediction_block = training_data[1:block_size + 1]
+for time in range(block_size):
+    context = x_context_data_block[:time + 1]
+    target = y_target_prediction_block[time]
+    print(f"When input is {context}  the target prediction is :{target}")
+print()
+print(f"This way the transformer has context ranging from from 1 to {block_size} to predict \n"
+      f"what should be next in the sequence")
+
+# # the batch dimension transformer dimensions context, time, batch
+torch.manual_seed(1337)
+batch_size = 4
+# the batch dimension contains the block sequences, batch size is number of blocks or how many
+# independent sequences the batch contains they are processed in parallel for efficiency
+
+block_size = 8
+
+
+# the block size is the maximum context length that the transformer will use in
+# making the predictions
+
+
+def get_batch(which_data_set):
+    # returns a small batch of inputs and targets
+    data = training_data if which_data_set == 'train' else validation_data
+    random_array_data_sampling_block_size_and_batch_size = torch.randint(len(data) - block_size, (batch_size,))
+    x_batch = torch.stack([data[i:i + block_size] for i in random_array_data_sampling_block_size_and_batch_size])
+    y_batch = torch.stack(
+        [data[i + 1:i + block_size + 1] for i in random_array_data_sampling_block_size_and_batch_size])
+    return x_batch, y_batch
+
+
+input_batch, target_batch = get_batch(which_data_set='train')
+print()
+print("inputs :\n---------------------------------------------------")
+print(f"Shape = {block_size} x {batch_size} = {input_batch.shape}")
+print(input_batch)
+print("targets :\n---------------------------------------------------")
+print(f"Shape = {block_size} x {batch_size} = {target_batch.shape}")
+print(target_batch)
+print("---------------------------------------------------")
+for iteration in range(batch_size):  # iterate over batch size dimension
+    for time_index in range(block_size):  # iterate over time dimension
+        context = input_batch[iteration, :time_index + 1]
+        target = target_batch[iteration, time_index]
+        print(f"When input is {context} --->  the target is {target}")
+
+# bigram language model
+torch.manual_seed(1337)
+
+
+class BigramLanguageModel(nn.Module):
+    def __init__(self, vocab_size):
+        super().__init__()
+        # each token directly reads off the logits for the next token from a lookup table
+        # constructor creates an embedding table shape vocab_size x vocab size
+        self.token_embedding_table = nn.Embedding(vocab_size, vocab_size)
+
+    def forward(self, x_input_index, targets=None):
+        # idx is index of input integers
+        # when the idx index of inputs is passed in this function each integer refers to the embedding table
+        # and from the embedding table plucks out the row of that integer and then pytorch creates
+        # a tensor using : batch (batch size-4) x time (block size -8) x channel (vocab size)
+        # input index and targets are both (Batch,Ttime) tensor of integers
+        torch_logits = self.token_embedding_table(x_input_index)
+        # arrange into tensor = (Batch,Time ,Channel) and place in the embedding table
+        # we have to rearrange the logit shape
+        # current multidimensional arrangement is  B x T x C
+        # rearrange dimension order to B x C X T in order for torch cross entropy function to accept
+        if targets is None:
+            loss_error = None
+        else:
+            batch_dimension, time_dimension, channel_dimension = torch_logits.shape
+            torch_logits = torch_logits.view(batch_dimension * time_dimension, channel_dimension)
+            targets = targets.view(batch_dimension * time_dimension)
+            loss_error = functional.cross_entropy(torch_logits, targets)
+        # loss is the cross entropy (error) between the predictions and the targets
+        return torch_logits, loss_error
+
+    def generate(self, x_input_index, max_new_tokens):
+        # function starts at x_input_index and adds + 1 until max tokens is reached
+        # idx is ( B,T) array of indices in the current context we reduced it to a 2-dimensional data shape to
+        # conform to pytorch's functional cross entropy method
+        for i in range(max_new_tokens):
+            # get the predictions
+            logit, loss_not_needed_for_generating = self(x_input_index)
+            # focus only on the last time step
+            logit = logit[:, -1, :]  # becomes (B,C)
+            # apply softmax to get probabilities
+            probabilities = functional.softmax(logit, dim=-1)  # (B,1)
+            # sample from the distribution
+            idx_next = torch.multinomial(probabilities, num_samples=1)  # (B,1)
+            # append or concatenate sampled index to the running sequence
+            x_input_index = torch.cat((x_input_index, idx_next), dim=1)  # (B, T+1)
+        return x_input_index
+
+
+bigram_model = BigramLanguageModel(vocab_size=character_vocab_size)
+logits, loss = bigram_model(input_batch, target_batch)
+print()
+print(f"Bigram model embedding table: {bigram_model}")
+print(f"Here is the new shape  {logits.shape}")
+print(f"Here is the loss {loss}")
+
+generated_message = decode(bigram_model.generate(x_input_index=torch.zeros((1, 1), dtype=torch.long),
+                                                 max_new_tokens=100)[0].tolist())
+print()
+print(f"Here is an untrained generated_message: \n{generated_message}")
+
+# Create a Pytorch Optimizer and train the model
+optimizer = torch.optim.AdamW(bigram_model.parameters(), lr=1e-3)
+batch_size = 32
+epochs = 8000
+# training loop
+print()
+print(f"Model is training for {epochs} epochs please be patient")
+for steps in range(epochs):
+    # sample a batch of data
+    x_batch, y_batch = get_batch("train")
+
+    # evaluate the loss error cross entropy
+    logits, loss = bigram_model(x_batch, y_batch)
+    optimizer.zero_grad(set_to_none=True)
+    loss.backward()
+    optimizer.step()
+
+generated_message = decode(bigram_model.generate(x_input_index=torch.zeros((1, 1), dtype=torch.long),
+                                                 max_new_tokens=100)[0].tolist())
+print()
+print(f"Here is an trained generated_message: \n{generated_message}")
